@@ -23,14 +23,20 @@
       max-width: 420px;
       text-align: center;
     }
-    .logo {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #1e3060;
-      letter-spacing: 2px;
-      margin-bottom: 4px;
+    .logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #1e3060;
+      border-radius: 10px;
+      padding: 14px 28px;
+      margin-bottom: 20px;
     }
-    .logo span { color: #c8a84b; }
+    .logo-wrap img {
+      height: 45px;
+      width: auto;
+      display: block;
+    }
     .subtitle {
       font-size: 0.85rem;
       color: #7a8499;
@@ -106,7 +112,9 @@
 </head>
 <body>
   <div class="card">
-    <div class="logo">BAIL<span>MEX</span></div>
+    <div class="logo-wrap">
+      <img src="https://www.bailmex.com.mx/wp-content/uploads/2026/02/140x45logo2.png" alt="Bailmex" />
+    </div>
     <div class="subtitle">ARRENDADORA &amp; FINANCIERA</div>
     <h2>Informe de Cartera</h2>
     <form id="loginForm" autocomplete="off">
