@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script>if(!sessionStorage.getItem("bx_auth")){window.location.replace("index.html");}</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Informe de Cartera — BAILMEX / SIMBA</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #1a3a6c;
+      --accent:  #e8a020;
+      --light:   #f4f6fa;
+      --border:  #d0d7e6;
+      --text:    #1e2535;
+      --muted:   #6b7a99;
+      --green:   #1e7e34;
+      --red:     #c0392b;
+      --yellow:  #d4a017;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef1f7; color: var(--text); }
+
+    /* COVER */
+    .cover {
+      background: linear-gradient(135deg, #0f2a5a 0%, #1a3a6c 60%, #2a5298 100%);
+      color: #fff; padding: 60px 48px 48px; position: relative; overflow: hidden;
+    }
+    .cover::before {
+      content: ''; position: absolute; right: -60px; top: -60px;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+    .cover-logo { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
+    .cover h1 { font-size: 36px; font-weight: 700; line-height: 1.25; margin-bottom: 10px; }
+    .cover h2 { font-size: 18px; font-weight: 400; color: #a8c0e8; margin-bottom: 30px; }
+    .cover-meta { display: flex; gap: 48px; flex-wrap: wrap; }
+    .cover-meta div { font-size: 13px; color: #a8c0e8; }
+    .cover-meta strong { display: block; font-size: 22px; color: #fff; margin-top: 4px; }
+
+    /* LAYOUT */
+    .container { max-width: 1200px; margin: 0 auto; padding: 36px 24px; }
+    .section { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(26,58,108,0.07); margin-bottom: 32px; overflow: hidden; }
+    .section-header {
+      background: var(--primary); color: #fff; padding: 18px 28px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-header .badge {
+      background: var(--accent); color: #fff; font-size: 11px;
+      font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.5px;
+    }
+    .section-header h2 { font-size: 17px; font-weight: 600; letter-spacing: 0.3px; }
+    .section-body { padding: 28px; }
+
+    /* KPI CARDS */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 28px; }
+    .kpi {
+      background: var(--light); border-radius: 8px; padding: 18px 20px;
+      border-left: 4px solid var(--primary);
+    }
+    .kpi.green  { border-left-color: var(--green); }
+    .kpi.accent { border-left-color: var(--accent); }
+    .kpi.red    { border-left-color: var(--red); }
+    .kpi label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .kpi .val   { font-size: 26px; font-weight: 700; color: var(--primary); line-height: 1; }
+    .kpi .val.green  { color: var(--green); }
+    .kpi .val.accent { color: #b07010; }
+    .kpi .val.red    { color: var(--red); }
+    .kpi .sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* TABLES */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead th {
+      background: var(--primary); color: #fff; padding: 10px 14px;
+      text-align: left; font-weight: 600; white-space: nowrap;
+    }
+    thead th.num { text-align: right; }
+    tbody tr:nth-child(even) { background: var(--light); }
+    tbody tr:hover { background: #dce6f4; }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.pct { text-align: right; color: var(--muted); font-size: 12px; }
+    tfoot td {
+      padding: 11px 14px; background: #1e3060; color: #fff;
+      font-weight: 700; border-top: 2px solid var(--accent);
+    }
+    tfoot td.num { text-align: right; }
+
+    /* STATUS CHIPS */
+    .chip { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+    .chip-activo    { background: #d4edda; color: #155724; }
+    .chip-demanda   { background: #f8d7da; color: #721c24; }
+    .chip-liquidado { background: #cce5ff; color: #004085; }
+    .chip-escriturado { background: #fff3cd; color: #856404; }
+    .chip-contrato  { background: #e2d9f3; color: #5a2d9c; }
+    .chip-refinanciado { background: #d6d8db; color: #383d41; }
+    .chip-proceso   { background: #d1ecf1; color: #0c5460; }
+    .chip-sinestatus { background: #f0f0f0; color: #555; }
+
+    /* CHARTS */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+    @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-box { background: var(--light); border-radius: 8px; padding: 20px; }
+    .chart-box h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 16px; }
+    .chart-box canvas { max-height: 280px; }
+
+    /* PROGRESS BAR */
+    .prog-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; }
+    .prog-label { width: 160px; flex-shrink: 0; color: var(--text); font-weight: 500; }
+    .prog-bar-bg { flex: 1; background: #e0e6f0; border-radius: 4px; height: 14px; }
+    .prog-bar { height: 14px; border-radius: 4px; background: var(--primary); }
+    .prog-pct { width: 46px; text-align: right; font-size: 12px; color: var(--muted); }
+    .prog-val { width: 130px; text-align: right; font-size: 12px; color: var(--text); }
+
+    /* RISK ALERT */
+    .alert { border-radius: 8px; padding: 14px 18px; margin-top: 16px; font-size: 13.5px; }
+    .alert-red    { background: #fce8e8; border-left: 4px solid var(--red); color: #6b1515; }
+    .alert-yellow { background: #fef6e0; border-left: 4px solid var(--yellow); color: #6b4a00; }
+    .alert-green  { background: #e8f5e9; border-left: 4px solid var(--green); color: #1b4d2e; }
+    .alert strong { font-weight: 700; }
+
+    /* DIVIDER */
+    .sub-title { font-size: 14px; font-weight: 700; color: var(--primary); margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; display: inline-block; }
+    .note { font-size: 11.5px; color: var(--muted); margin-top: 8px; font-style: italic; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ PORTADA ═══════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">Análisis de Cartera — BAILMEX / SIMBA</div>
+  <h1>Informe de Activos Financieros</h1>
+  <h2>Cartera Administrada · Corte al 21 de Abril de 2026</h2>
+  <div class="cover-meta">
+    <div><span>Total Captación</span><strong>$2,901,648,122.94</strong></div>
+    <div><span>Activos en Cartera</span><strong>631 registros</strong></div>
+    <div><span>Contratos Únicos</span><strong>145</strong></div>
+    <div><span>Clientes</span><strong>108</strong></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════ 1. CONTRATOS ACTIVOS VS CAPTACIÓN ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">01</span>
+    <h2>Contratos Activos vs Captación</h2>
+  </div>
+  <div class="section-body">
+
+    <div class="kpi-grid">
+      <div class="kpi green">
+        <label>Valor Activos ACTIVO</label>
+        <div class="val green">$618.9 M</div>
+        <div class="sub">541 activos · 21.33% captación</div>
+      </div>
+      <div class="kpi accent">
+        <label>Total Captación</label>
+        <div class="val accent">$2,901.6 M</div>
+        <div class="sub">Base de comparación</div>
+      </div>
+      <div class="kpi red">
+        <label>En Demanda / Litigio</label>
+        <div class="val red">$263.2 M</div>
+        <div class="sub">27 activos · 9.07% captación</div>
+      </div>
+      <div class="kpi">
+        <label>Portafolio con Valor Asignado</label>
+        <div class="val">$975.6 M</div>
+        <div class="sub">580 activos · 33.62% captación</div>
+      </div>
+    </div>
+
+    <div class="sub-title">Detalle por Estatus</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Estatus</th>
+            <th class="num">Cantidad</th>
+            <th class="num">% Activos</th>
+            <th class="num">Valor Factura (MXN)</th>
+            <th class="num">% Captación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="chip chip-activo">ACTIVO</span></td>
+            <td class="num">541</td>
+            <td class="pct">85.74%</td>
+            <td class="num">$618,872,486.40</td>
+            <td class="pct">21.33%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-demanda">DEMANDA</span></td>
+            <td class="num">27</td>
+            <td class="pct">4.28%</td>
+            <td class="num">$263,232,846.22</td>
+            <td class="pct">9.07%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-liquidado">LIQUIDADO</span></td>
+            <td class="num">26</td>
+            <td class="pct">4.12%</td>
+            <td class="num">$16,276,138.49</td>
+            <td class="pct">0.56%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-escriturado">ESCRITURADO</span></td>
+            <td class="num">16</td>
+            <td class="pct">2.53%</td>
+            <td class="num">$41,545,336.29</td>
+            <td class="pct">1.43%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-sinestatus">SIN ESTATUS</span></td>
+            <td class="num">14</td>
+            <td class="pct">2.22%</td>
+            <td class="num">$5,623,598.39</td>
+            <td class="pct">0.19%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-contrato">CONTRATO</span></td>
+            <td class="num">4</td>
+            <td class="pct">0.63%</td>
+            <td class="num">$23,279,025.56</td>
+            <td class="pct">0.80%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-refinanciado">REFINANCIADO</span></td>
+            <td class="num">2</td>
+            <td class="pct">0.32%</td>
+            <td class="num">$210,790.35</td>
+            <td class="pct">0.01%</td>
+          </tr>
+          <tr>
+            <td><span class="chip chip-proceso">EN PROCESO</span></td>
+            <td class="num">1</td>
+            <td class="pct">0.16%</td>
+            <td class="num">$6,580,000.00</td>
+            <td class="pct">0.23%</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL PORTAFOLIO</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+            <td class="num">$975,620,221.70</td>
+            <td class="num">33.62%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="note">* El 66.38% restante de la captación ($1,926,027,901.24) corresponde a financiamiento sin activo con valor de factura registrado en el sistema.</p>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Distribución por Estatus (Cantidad)</h3>
+        <canvas id="chartStatusCount"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Valor por Estatus vs Captación Total</h3>
+        <canvas id="chartStatusValue"></canvas>
+      </div>
+    </div>
+
+    <!-- Barra de penetración de captación -->
+    <div style="margin-top:28px">
+      <div class="sub-title">Penetración sobre Captación Total ($2,901.6 M)</div>
+      <div class="prog-row">
+        <div class="prog-label">Activos ACTIVO</div>
+        <div class="prog-bar-bg"><div class="prog-bar" style="width:21.33%; background:#1e7e34;"></div></div>
+        <div class="prog-pct">21.33%</div>
+        <div class="prog-val">$618,872,486</div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label">En Demanda</div>
+        <div class="prog-bar-bg"><div class="prog-bar" style="width:9.07%; background:#c0392b;"></div></div>
+        <div class="prog-pct">9.07%</div>
+        <div class="prog-val">$263,232,846</div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label">Demás estatus</div>
+        <div class="prog-bar-bg"><div class="prog-bar" style="width:3.03%; background:#e8a020;"></div></div>
+        <div class="prog-pct">3.03%</div>
+        <div class="prog-val">$87,514,890</div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label">Sin valor asignado</div>
+        <div class="prog-bar-bg"><div class="prog-bar" style="width:66.57%; background:#d0d7e6;"></div></div>
+        <div class="prog-pct">66.57%</div>
+        <div class="prog-val">$1,932,038,786</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2. DISTRIBUCIÓN DE ACTIVOS ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">02</span>
+    <h2>Distribución de Activos</h2>
+  </div>
+  <div class="section-body">
+
+    <!-- Por Producto -->
+    <div class="sub-title">Por Tipo de Producto</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th class="num">Cantidad</th>
+            <th class="num">% Activos</th>
+            <th class="num">Valor Factura (MXN)</th>
+            <th class="num">% Valor</th>
+            <th class="num">% Captación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>LEASE BACK</td><td class="num">287</td><td class="pct">45.48%</td><td class="num">$437,716,579.33</td><td class="pct">44.86%</td><td class="pct">15.08%</td></tr>
+          <tr><td>SIN ASIGNAR</td><td class="num">100</td><td class="pct">15.85%</td><td class="num">$296,139,289.49</td><td class="pct">30.35%</td><td class="pct">10.20%</td></tr>
+          <tr><td>PRENDARIA</td><td class="num">127</td><td class="pct">20.13%</td><td class="num">$57,110,574.09</td><td class="pct">5.85%</td><td class="pct">1.97%</td></tr>
+          <tr><td>INMUEBLE PROPIO</td><td class="num">21</td><td class="pct">3.33%</td><td class="num">$71,404,361.85</td><td class="pct">7.32%</td><td class="pct">2.46%</td></tr>
+          <tr><td>ARRENDAMIENTO PURO</td><td class="num">26</td><td class="pct">4.12%</td><td class="num">$54,590,509.37</td><td class="pct">5.60%</td><td class="pct">1.88%</td></tr>
+          <tr><td>MUTUO</td><td class="num">48</td><td class="pct">7.61%</td><td class="num">$32,706,523.81</td><td class="pct">3.35%</td><td class="pct">1.13%</td></tr>
+          <tr><td>ARRENDAMIENTO</td><td class="num">14</td><td class="pct">2.22%</td><td class="num">$14,189,358.05</td><td class="pct">1.45%</td><td class="pct">0.49%</td></tr>
+          <tr><td>HIPOTECA</td><td class="num">2</td><td class="pct">0.32%</td><td class="num">$10,424,365.00</td><td class="pct">1.07%</td><td class="pct">0.36%</td></tr>
+          <tr><td>PRENDA</td><td class="num">6</td><td class="pct">0.95%</td><td class="num">$1,338,660.71</td><td class="pct">0.14%</td><td class="pct">0.05%</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+            <td class="num">$975,620,221.70</td>
+            <td class="num">100.00%</td>
+            <td class="num">33.62%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Concentración por Producto (Valor)</h3>
+        <canvas id="chartProductoValor"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Concentración por Producto (Cantidad)</h3>
+        <canvas id="chartProductoCantidad"></canvas>
+      </div>
+    </div>
+
+    <!-- Por Marca -->
+    <div class="sub-title" style="margin-top:28px">Por Marca de Activo</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Marca</th>
+            <th class="num">Cantidad</th>
+            <th class="num">% del Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>KING LONG</td><td class="num">175</td><td class="pct">27.74%</td></tr>
+          <tr><td>AMBUS HIGER</td><td class="num">52</td><td class="pct">8.24%</td></tr>
+          <tr><td>MERCEDES BENZ</td><td class="num">16</td><td class="pct">2.53%</td></tr>
+          <tr><td>DAYUN</td><td class="num">13</td><td class="pct">2.06%</td></tr>
+          <tr><td>400 m²</td><td class="num">13</td><td class="pct">2.06%</td></tr>
+          <tr><td>LAND ROVER</td><td class="num">11</td><td class="pct">1.74%</td></tr>
+          <tr><td>KING LONG MODELO</td><td class="num">10</td><td class="pct">1.58%</td></tr>
+          <tr><td>FOTON</td><td class="num">7</td><td class="pct">1.11%</td></tr>
+          <tr><td>CHEVROLET</td><td class="num">6</td><td class="pct">0.95%</td></tr>
+          <tr><td>Sin marca registrada</td><td class="num">202</td><td class="pct">32.01%</td></tr>
+          <tr><td>Otras marcas</td><td class="num">126</td><td class="pct">19.97%</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="note">* El portafolio está altamente concentrado en vehículos de transporte colectivo (autobuses King Long / Ambus Higer).</p>
+
+    <div class="chart-grid" style="margin-top:16px">
+      <div class="chart-box" style="grid-column: 1 / -1">
+        <h3>Top 10 Marcas por Cantidad de Activos</h3>
+        <canvas id="chartMarcas" style="max-height:220px"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 3. COSECHAS DE CRÉDITO ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">03</span>
+    <h2>Cosechas de Crédito</h2>
+  </div>
+  <div class="section-body">
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Año Cosecha</th>
+            <th class="num">Créditos</th>
+            <th class="num">% Cantidad</th>
+            <th class="num">Valor Factura (MXN)</th>
+            <th class="num">% Valor</th>
+            <th class="num">% Captación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>2018</td><td class="num">8</td><td class="pct">1.27%</td><td class="num">$19,911,500.00</td><td class="pct">2.04%</td><td class="pct">0.69%</td></tr>
+          <tr><td>2019</td><td class="num">8</td><td class="pct">1.27%</td><td class="num">$24,489,999.99</td><td class="pct">2.51%</td><td class="pct">0.84%</td></tr>
+          <tr><td>2020</td><td class="num">10</td><td class="pct">1.58%</td><td class="num">$27,079,721.14</td><td class="pct">2.78%</td><td class="pct">0.93%</td></tr>
+          <tr><td>2021</td><td class="num">14</td><td class="pct">2.22%</td><td class="num">$19,379,716.52</td><td class="pct">1.99%</td><td class="pct">0.67%</td></tr>
+          <tr><td>2022</td><td class="num">88</td><td class="pct">13.95%</td><td class="num">$135,996,896.60</td><td class="pct">13.94%</td><td class="pct">4.68%</td></tr>
+          <tr><td>2023</td><td class="num">74</td><td class="pct">11.72%</td><td class="num">$38,594,685.04</td><td class="pct">3.96%</td><td class="pct">1.33%</td></tr>
+          <tr><td>2024</td><td class="num">103</td><td class="pct">16.32%</td><td class="num">$118,515,838.46</td><td class="pct">12.15%</td><td class="pct">4.08%</td></tr>
+          <tr><td>2025</td><td class="num">184</td><td class="pct">29.16%</td><td class="num">$218,601,008.93</td><td class="pct">22.41%</td><td class="pct">7.53%</td></tr>
+          <tr><td>2026</td><td class="num">17</td><td class="pct">2.69%</td><td class="num">$14,971,949.79</td><td class="pct">1.53%</td><td class="pct">0.52%</td></tr>
+          <tr><td>Sin fecha</td><td class="num">125</td><td class="pct">19.81%</td><td class="num">$358,078,905.23</td><td class="pct">36.70%</td><td class="pct">12.34%</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+            <td class="num">$975,620,221.70</td>
+            <td class="num">100.00%</td>
+            <td class="num">33.62%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Evolución de Colocación por Año (Cantidad)</h3>
+        <canvas id="chartCosechaCount"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Evolución de Colocación por Año (Valor MXN)</h3>
+        <canvas id="chartCosechaValor"></canvas>
+      </div>
+    </div>
+
+    <div class="alert alert-green" style="margin-top:20px">
+      <strong>Tendencia positiva:</strong> El 56% del valor cosechado con fecha registrada proviene de 2024–2026, lo que indica una aceleración reciente en la colocación. La cosecha 2025 es la más grande, concentrando el 32.86% del valor total.
+    </div>
+    <div class="alert alert-yellow" style="margin-top:10px">
+      <strong>Atencion cosecha 2023:</strong> Pese a contar con 74 créditos, su valor ($38.6 M) es significativamente inferior a 2022 ($136 M) y 2024 ($118.5 M), lo que sugiere una mezcla de activos de menor valor unitario en ese periodo.
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 4. COMPARATIVA POR FONDEADOR ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">04</span>
+    <h2>Comparativa por Fondeador</h2>
+  </div>
+  <div class="section-body">
+
+    <div class="kpi-grid">
+      <div class="kpi green">
+        <label>BAILMEX — Total Activos</label>
+        <div class="val green">483</div>
+        <div class="sub">$921,940,428.98 · 31.77% captación</div>
+      </div>
+      <div class="kpi accent">
+        <label>SIMBA — Total Activos</label>
+        <div class="val accent">109</div>
+        <div class="sub">$46,696,681.19 · 1.61% captación</div>
+      </div>
+      <div class="kpi">
+        <label>BAILMEX / ACTIVO</label>
+        <div class="val">445</div>
+        <div class="sub">$593,378,674.08 activos activos</div>
+      </div>
+      <div class="kpi">
+        <label>SIMBA / ACTIVO</label>
+        <div class="val">71</div>
+        <div class="sub">$24,134,299.18 activos activos</div>
+      </div>
+    </div>
+
+    <div class="sub-title">Detalle Comparativo</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fondeadora</th>
+            <th class="num">Total Activos</th>
+            <th class="num">% Cantidad</th>
+            <th class="num">Valor Total (MXN)</th>
+            <th class="num">% Valor Port.</th>
+            <th class="num">% Captación</th>
+            <th class="num">Activos ACTIVO</th>
+            <th class="num">Valor ACTIVO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>BAILMEX</strong></td>
+            <td class="num">483</td>
+            <td class="pct">76.54%</td>
+            <td class="num">$921,940,428.98</td>
+            <td class="pct">94.50%</td>
+            <td class="pct">31.77%</td>
+            <td class="num">445</td>
+            <td class="num">$593,378,674.08</td>
+          </tr>
+          <tr>
+            <td><strong>SIMBA</strong></td>
+            <td class="num">109</td>
+            <td class="pct">17.27%</td>
+            <td class="num">$46,696,681.19</td>
+            <td class="pct">4.79%</td>
+            <td class="pct">1.61%</td>
+            <td class="num">71</td>
+            <td class="num">$24,134,299.18</td>
+          </tr>
+          <tr>
+            <td>Sin fondeadora / Sin datos</td>
+            <td class="num">39</td>
+            <td class="pct">6.18%</td>
+            <td class="num">$6,983,111.53</td>
+            <td class="pct">0.72%</td>
+            <td class="pct">0.24%</td>
+            <td class="num">25</td>
+            <td class="num">$1,359,513.14</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+            <td class="num">$975,620,221.70</td>
+            <td class="num">100.00%</td>
+            <td class="num">33.62%</td>
+            <td class="num">541</td>
+            <td class="num">$618,872,486.40</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Ticket promedio -->
+    <div class="sub-title" style="margin-top:24px">Indicadores de Eficiencia</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <label>Ticket Promedio BAILMEX</label>
+        <div class="val">$1.91 M</div>
+        <div class="sub">por activo</div>
+      </div>
+      <div class="kpi">
+        <label>Ticket Promedio SIMBA</label>
+        <div class="val">$0.43 M</div>
+        <div class="sub">por activo</div>
+      </div>
+      <div class="kpi green">
+        <label>Retención BAILMEX (Activo/Total)</label>
+        <div class="val green">92.13%</div>
+        <div class="sub">445 de 483 activos activos</div>
+      </div>
+      <div class="kpi accent">
+        <label>Retención SIMBA (Activo/Total)</label>
+        <div class="val accent">65.14%</div>
+        <div class="sub">71 de 109 activos activos</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Participación por Fondeador (Valor)</h3>
+        <canvas id="chartFondeadorValor"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Activos Totales vs Activos ACTIVO</h3>
+        <canvas id="chartFondeadorActivo"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 5. ANÁLISIS DE RIESGO ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">05</span>
+    <h2>Análisis de Riesgo y Concentración</h2>
+  </div>
+  <div class="section-body">
+
+    <!-- Riesgo por cliente -->
+    <div class="sub-title">Top 10 Clientes por Exposición</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th class="num">Activos</th>
+            <th class="num">% Cantidad</th>
+            <th class="num">Valor Factura (MXN)</th>
+            <th class="num">% Valor Port.</th>
+            <th class="num">% Captación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CRAFT AVIA CENTER S.A.P.I. DE C.V. <span class="chip chip-demanda">DEMANDA</span></td>
+            <td class="num">25</td>
+            <td class="pct">3.96%</td>
+            <td class="num">$260,495,691.05</td>
+            <td class="pct">26.70%</td>
+            <td class="pct">8.97%</td>
+          </tr>
+          <tr>
+            <td>INTRAMOBILITY SAPI DE C.V.</td>
+            <td class="num">133</td>
+            <td class="pct">21.08%</td>
+            <td class="num">$145,143,103.19</td>
+            <td class="pct">14.88%</td>
+            <td class="pct">5.00%</td>
+          </tr>
+          <tr>
+            <td>ENVASES PLASTICOS</td>
+            <td class="num">49</td>
+            <td class="pct">7.77%</td>
+            <td class="num">$128,756,234.72</td>
+            <td class="pct">13.20%</td>
+            <td class="pct">4.43%</td>
+          </tr>
+          <tr>
+            <td>AUTOTRANSPORTES SANVER S.A. DE C.V.</td>
+            <td class="num">56</td>
+            <td class="pct">8.87%</td>
+            <td class="num">$97,931,034.50</td>
+            <td class="pct">10.04%</td>
+            <td class="pct">3.37%</td>
+          </tr>
+          <tr>
+            <td>GREEN BUS S.A. DE C.V.</td>
+            <td class="num">61</td>
+            <td class="pct">9.67%</td>
+            <td class="num">$85,662,068.96</td>
+            <td class="pct">8.78%</td>
+            <td class="pct">2.95%</td>
+          </tr>
+          <tr>
+            <td>TRANSPORTES ACUEDUCTO DE QRO S.A. DE C.V.</td>
+            <td class="num">11</td>
+            <td class="pct">1.74%</td>
+            <td class="num">$37,931,034.46</td>
+            <td class="pct">3.89%</td>
+            <td class="pct">1.31%</td>
+          </tr>
+          <tr>
+            <td>ALIMENTOS PROFUSA S.A. DE C.V.</td>
+            <td class="num">44</td>
+            <td class="pct">6.97%</td>
+            <td class="num">$21,701,900.20</td>
+            <td class="pct">2.22%</td>
+            <td class="pct">0.75%</td>
+          </tr>
+          <tr>
+            <td>MUSA</td>
+            <td class="num">3</td>
+            <td class="pct">0.48%</td>
+            <td class="num">$19,729,720.99</td>
+            <td class="pct">2.02%</td>
+            <td class="pct">0.68%</td>
+          </tr>
+          <tr>
+            <td>CASA CORTEZA S.A.P.I. DE C.V.</td>
+            <td class="num">41</td>
+            <td class="pct">6.50%</td>
+            <td class="num">$19,320,000.00</td>
+            <td class="pct">1.98%</td>
+            <td class="pct">0.67%</td>
+          </tr>
+          <tr>
+            <td>OPERADORA COMERCIAL INTEGRAL S.A. DE C.V.</td>
+            <td class="num">5</td>
+            <td class="pct">0.79%</td>
+            <td class="num">$13,109,202.00</td>
+            <td class="pct">1.34%</td>
+            <td class="pct">0.45%</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOP 10 TOTAL</strong></td>
+            <td class="num">428</td>
+            <td class="num">67.83%</td>
+            <td class="num">$829,779,990.07</td>
+            <td class="num">85.05%</td>
+            <td class="num">28.59%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="chart-grid" style="margin-top:20px">
+      <div class="chart-box" style="grid-column: 1 / -1">
+        <h3>Concentración Top 10 Clientes por Valor</h3>
+        <canvas id="chartClientes" style="max-height:240px"></canvas>
+      </div>
+    </div>
+
+    <div class="alert alert-red" style="margin-top:20px">
+      <strong>Riesgo crítico — CRAFT AVIA CENTER:</strong> Este cliente concentra el 26.70% del valor del portafolio con valor registrado ($260.5 M), y la totalidad de sus 25 activos se encuentran en estatus DEMANDA. Representa el 8.97% de la captación total. Se recomienda seguimiento jurídico prioritario.
+    </div>
+    <div class="alert alert-yellow" style="margin-top:10px">
+      <strong>Concentración en Top 3:</strong> Los tres principales clientes concentran el 54.78% del valor del portafolio ($534.4 M), lo que representa una alta concentración de riesgo. Se sugiere diversificación de originación.
+    </div>
+
+    <!-- Por Broker -->
+    <div class="sub-title" style="margin-top:28px">Por Canal / Broker</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Broker</th>
+            <th class="num">Activos</th>
+            <th class="num">% Cantidad</th>
+            <th class="num">Valor Factura (MXN)</th>
+            <th class="num">% Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>CONFIDENTIA</td><td class="num">497</td><td class="pct">78.76%</td><td class="num">$507,980,822.55</td><td class="pct">52.07%</td></tr>
+          <tr><td>COFICRED</td><td class="num">82</td><td class="pct">13.00%</td><td class="num">$394,751,264.96</td><td class="pct">40.46%</td></tr>
+          <tr><td>SOLUM</td><td class="num">21</td><td class="pct">3.33%</td><td class="num">$71,404,361.85</td><td class="pct">7.32%</td></tr>
+          <tr><td>Sin broker / Sin datos</td><td class="num">31</td><td class="pct">4.91%</td><td class="num">$1,483,772.34</td><td class="pct">0.15%</td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="num">631</td>
+            <td class="num">100.00%</td>
+            <td class="num">$975,620,221.70</td>
+            <td class="num">100.00%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="note">* CONFIDENTIA lidera en cantidad (78.76%) y valor (52.07%). COFICRED, aunque menor en cantidad, concentra el 40.46% del valor con ticket promedio significativamente más alto ($4.81 M vs $1.02 M de CONFIDENTIA).</p>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 6. INDICADORES ADICIONALES ═══════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="badge">06</span>
+    <h2>Indicadores Adicionales y Resumen Ejecutivo</h2>
+  </div>
+  <div class="section-body">
+
+    <div class="sub-title">Indicadores Clave de la Cartera</div>
+    <div class="kpi-grid">
+      <div class="kpi green">
+        <label>Tasa de Actividad</label>
+        <div class="val green">89.65%</div>
+        <div class="sub">Activos ACTIVO / Total con fondeador</div>
+      </div>
+      <div class="kpi red">
+        <label>Tasa de Litigiosidad</label>
+        <div class="val red">9.07%</div>
+        <div class="sub">Valor en demanda / Captación</div>
+      </div>
+      <div class="kpi">
+        <label>Ticket Promedio General</label>
+        <div class="val">$1.68 M</div>
+        <div class="sub">Valor promedio por activo con valor</div>
+      </div>
+      <div class="kpi accent">
+        <label>Activos Multimarca</label>
+        <div class="val accent">KING LONG</div>
+        <div class="sub">13.88% de la cartera (175 unidades)</div>
+      </div>
+    </div>
+
+    <div class="sub-title" style="margin-top:24px">Comportamiento de Contratos con Múltiples Activos</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Contrato</th>
+            <th class="num">N° Activos</th>
+            <th>Observación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>BM0308-C0149</td><td class="num">20</td><td>Mayor concentración de activos por contrato</td></tr>
+          <tr><td>BA029-C0021</td><td class="num">17</td><td>Segundo contrato por volumen</td></tr>
+          <tr><td>49 contratos adicionales</td><td class="num">2–16</td><td>Contratos con múltiples activos</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub-title" style="margin-top:28px">Resumen Ejecutivo</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="alert alert-green">
+        <strong>Fortalezas:</strong><br>
+        · Cartera con 541 activos en estatus ACTIVO ($618.9 M)<br>
+        · Crecimiento acelerado en cosecha 2025 (+$218.6 M)<br>
+        · BAILMEX domina con 95.19% del valor fondeado<br>
+        · Diversificación en 108 clientes y 8 productos
+      </div>
+      <div class="alert alert-red">
+        <strong>Áreas de atención:</strong><br>
+        · $263.2 M en demanda (CRAFT AVIA, caso crítico)<br>
+        · Alta concentración: Top 3 clientes = 54.78% del valor<br>
+        · Baja penetración: solo 33.62% captación tiene valor registrado
+      </div>
+    </div>
+    <div class="alert alert-yellow" style="margin-top:12px">
+      <strong>Recomendaciones:</strong> (1) Resolver judicialmente el expediente CRAFT AVIA CENTER con urgencia dado el impacto al 9% de captación. (2) Diversificar canales más allá de CONFIDENTIA para reducir dependencia. (3) Establecer límite de concentración por cliente (sugerido: máx. 10% del portafolio).
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- FOOTER -->
+<div style="text-align:center; padding:20px; font-size:11px; color:#8899aa; background:#e8ecf4;">
+  Informe generado el 21 de Abril de 2026 · BAILMEX / SIMBA · Uso interno confidencial
+</div>
+
+<!-- ═══════════════════════════ CHARTS JS ═══════════════════════════ -->
+<script>
+Chart.defaults.font.family = "'Segoe UI', Arial, sans-serif";
+Chart.defaults.font.size = 12;
+const C = (id, cfg) => new Chart(document.getElementById(id), cfg);
+
+const COLORS = ['#1a3a6c','#c0392b','#e8a020','#2980b9','#27ae60','#8e44ad','#16a085','#d35400'];
+const COLORS2 = ['#1a3a6c','#2a5298','#3d72c0','#6b9ed4','#a8c4e8','#d0dff5','#e8eef8'];
+
+// 1. STATUS COUNT
+C('chartStatusCount',{
+  type:'doughnut',
+  data:{
+    labels:['ACTIVO','DEMANDA','LIQUIDADO','ESCRITURADO','SIN ESTATUS','CONTRATO','REFINANCIADO','EN PROCESO'],
+    datasets:[{data:[541,27,26,16,14,4,2,1], backgroundColor:['#27ae60','#c0392b','#2980b9','#e8a020','#bdc3c7','#8e44ad','#95a5a6','#16a085'], borderWidth:2, borderColor:'#fff'}]
+  },
+  options:{plugins:{legend:{position:'right', labels:{boxWidth:14, padding:10}}}}
+});
+
+// 2. STATUS VALUE vs captación
+C('chartStatusValue',{
+  type:'bar',
+  data:{
+    labels:['ACTIVO','DEMANDA','ESCRITURADO','CONTRATO','LIQUIDADO','EN PROCESO','REFINANCIADO'],
+    datasets:[{
+      label:'Valor (M MXN)',
+      data:[618.87,263.23,41.55,23.28,16.28,6.58,0.21],
+      backgroundColor:['#27ae60','#c0392b','#e8a020','#8e44ad','#2980b9','#16a085','#95a5a6'],
+      borderRadius:4
+    }]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{y:{ticks:{callback:v=>'$'+v+'M'}, grid:{color:'#e8ecf4'}},x:{grid:{display:false}}}
+  }
+});
+
+// 3. PRODUCTO VALOR
+C('chartProductoValor',{
+  type:'doughnut',
+  data:{
+    labels:['Lease Back','Sin producto','Inmueble Propio','Prendaria','Arr. Puro','Mutuo','Arrendamiento','Hipoteca','Prenda'],
+    datasets:[{data:[437.7,296.1,71.4,57.1,54.6,32.7,14.2,10.4,1.3], backgroundColor:COLORS, borderWidth:2, borderColor:'#fff'}]
+  },
+  options:{plugins:{legend:{position:'right', labels:{boxWidth:12, padding:8, font:{size:11}}}}}
+});
+
+// 4. PRODUCTO CANTIDAD
+C('chartProductoCantidad',{
+  type:'doughnut',
+  data:{
+    labels:['Lease Back','Sin Asignar','Prendaria','Mutuo','Arr. Puro','Inmueble Propio','Arrendamiento','Prenda','Hipoteca'],
+    datasets:[{data:[287,100,127,48,26,21,14,6,2], backgroundColor:COLORS2, borderWidth:2, borderColor:'#fff'}]
+  },
+  options:{plugins:{legend:{position:'right', labels:{boxWidth:12, padding:8, font:{size:11}}}}}
+});
+
+// 5. MARCAS
+C('chartMarcas',{
+  type:'bar',
+  data:{
+    labels:['KING LONG','AMBUS HIGER','Sin marca','MERCEDES BENZ','DAYUN','400 m²','LAND ROVER','KING LONG MOD.','FOTON','CHEVROLET'],
+    datasets:[{data:[175,52,202,16,13,13,11,10,7,6], backgroundColor:'#1a3a6c', borderRadius:4}]
+  },
+  options:{
+    indexAxis:'y',
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'#e8ecf4'}}, y:{grid:{display:false}}}
+  }
+});
+
+// 6. COSECHA COUNT
+C('chartCosechaCount',{
+  type:'bar',
+  data:{
+    labels:['2018','2019','2020','2021','2022','2023','2024','2025','2026'],
+    datasets:[{label:'Créditos',data:[8,8,10,14,88,74,103,184,17],backgroundColor:'#1a3a6c',borderRadius:4}]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{y:{grid:{color:'#e8ecf4'}},x:{grid:{display:false}}}
+  }
+});
+
+// 7. COSECHA VALOR
+C('chartCosechaValor',{
+  type:'line',
+  data:{
+    labels:['2018','2019','2020','2021','2022','2023','2024','2025','2026'],
+    datasets:[{
+      label:'Valor (M MXN)',
+      data:[19.9,24.5,27.1,19.4,136.0,38.6,118.5,218.6,15.0],
+      borderColor:'#e8a020', backgroundColor:'rgba(232,160,32,0.12)',
+      fill:true, tension:0.4, pointRadius:5, pointBackgroundColor:'#e8a020'
+    }]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{y:{ticks:{callback:v=>'$'+v+'M'}, grid:{color:'#e8ecf4'}},x:{grid:{display:false}}}
+  }
+});
+
+// 8. FONDEADOR VALOR
+C('chartFondeadorValor',{
+  type:'doughnut',
+  data:{
+    labels:['BAILMEX','SIMBA'],
+    datasets:[{data:[921.94,46.70], backgroundColor:['#1a3a6c','#e8a020'], borderWidth:3, borderColor:'#fff'}]
+  },
+  options:{plugins:{legend:{position:'bottom'}}}
+});
+
+// 9. FONDEADOR ACTIVOS
+C('chartFondeadorActivo',{
+  type:'bar',
+  data:{
+    labels:['BAILMEX','SIMBA'],
+    datasets:[
+      {label:'Total Activos',data:[483,109],backgroundColor:'#2a5298',borderRadius:4},
+      {label:'Activos ACTIVO',data:[445,71],backgroundColor:'#27ae60',borderRadius:4}
+    ]
+  },
+  options:{
+    plugins:{legend:{position:'bottom'}},
+    scales:{y:{grid:{color:'#e8ecf4'}},x:{grid:{display:false}}}
+  }
+});
+
+// 10. CLIENTES
+C('chartClientes',{
+  type:'bar',
+  data:{
+    labels:[
+      'CRAFT AVIA CENTER','INTRAMOBILITY','ENVASES PLASTICOS',
+      'SANVER','GREEN BUS','ACUEDUCTO QRO','PROFUSA','MUSA','CASA CORTEZA','OPERADORA INTEGRAL'
+    ],
+    datasets:[{
+      label:'Valor (M MXN)',
+      data:[260.5,145.1,128.8,97.9,85.7,37.9,21.7,19.7,19.3,13.1],
+      backgroundColor:['#c0392b','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c','#1a3a6c'],
+      borderRadius:4
+    }]
+  },
+  options:{
+    plugins:{legend:{display:false}},
+    scales:{
+      y:{ticks:{callback:v=>'$'+v+'M'}, grid:{color:'#e8ecf4'}},
+      x:{grid:{display:false}, ticks:{font:{size:10}}}
+    }
+  }
+});
+</script>
+</body>
+</html>
